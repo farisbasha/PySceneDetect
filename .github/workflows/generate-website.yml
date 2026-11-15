@@ -32,7 +32,7 @@ jobs:
 
       - name: Generate Website
         run: |
-          mkdocs build -f website/mkdocs.yml
+          python website/build.py --strict
 
       - name: Update Website
         run: |
@@ -49,6 +49,8 @@ jobs:
           git rm website/build/* -r -f --ignore-unmatch
           git config --global user.name github-actions
           git config --global user.email github-actions@github.com
-          git commit -a -m "[docs] @${{ github.triggering_actor }}: Generate Website" \
-            -m "Commit: ${{ github.sha }}"
-          git push
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            git commit -a -m "[docs] @${{ github.triggering_actor }}: Generate Website" \
+              -m "Commit: ${{ github.sha }}"
+            git push
+          fi

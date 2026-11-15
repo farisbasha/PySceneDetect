@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block main %}
+<main id="main-content" class="container not-found-main" tabindex="-1">
+  <div class="not-found-card">
+    <p class="not-found-code" aria-hidden="true">404</p>
+    <h1 id="404-title">Page Not Found</h1>
+    <p id="404-body">The requested page could not be found. Try searching above or return to the <a href="/">PySceneDetect homepage</a>.</p>
+  </div>
+</main>
+
+<script>
+(function() {
+  var path = window.location.pathname;
+  var pageTitle = document.getElementById("404-title");
+  var pageBody = document.getElementById("404-body");
+
+  function showRedirect(url, labelText) {
+    if (pageTitle) {
+      pageTitle.textContent = "Redirecting...";
+    }
+    if (pageBody) {
+      pageBody.textContent = "Redirecting to ";
+      var link = document.createElement("a");
+      link.href = url;
+      link.textContent = labelText;
+      pageBody.appendChild(link);
+    }
+    window.location.href = url;
+  }
+
+  // The canonical form is "issues" but we allow "issue" as well.
+  var TARGETS = ["/issue", "/issues", "/issue/", "/issues/"];
+  for (var i = 0; i < TARGETS.length; i++) {
+    if (path === TARGETS[i]) {
+      showRedirect("https://github.com/Breakthrough/PySceneDetect/issues/", "GitHub issues...");
+      return;
+    }
+  }
+
+  var PREFIXES = ["/issue/", "/issues/"];
+  for (var j = 0; j < PREFIXES.length; j++) {
+    var prefix = PREFIXES[j];
+    if (path.indexOf(prefix) === 0) {
+      var rawRest = path.substring(prefix.length).replace(/\/+$/, "");
+      if (rawRest && /^[0-9A-Za-z._-]+$/.test(rawRest)) {
+        var encoded = encodeURIComponent(rawRest);
+        var newUrl = "https://github.com/Breakthrough/PySceneDetect/issues/" + encoded;
+        showRedirect(newUrl, "issue #" + rawRest + " on GitHub...");
+        return;
+      }
+    }
+  }
+})();
+</script>
+{% endblock %}

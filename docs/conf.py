@@ -12,12 +12,91 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("_ext"))
 
 from scenedetect import __version__ as scenedetect_version
+
+_DOCS_DIR = Path(__file__).resolve().parent
+_REPO_DIR = _DOCS_DIR.parent
+
+
+def _load_doc_versions() -> tuple[str, list[dict[str, object]]]:
+    """Load published documentation versions from LATEST_VERSION and website/pages/docs.md."""
+    latest_file = _DOCS_DIR / "LATEST_VERSION"
+    latest_ver = (
+        latest_file.read_text(encoding="utf-8").strip().lstrip("v")
+        if latest_file.is_file()
+        else scenedetect_version.split(".dev")[0]
+    )
+
+    stable_slugs: list[str] = []
+    legacy_slugs: list[str] = []
+    docs_md = _REPO_DIR / "website" / "pages" / "docs.md"
+    if docs_md.is_file():
+        section = ""
+        for raw_line in docs_md.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if line.startswith("## "):
+                section = line[3:].strip().lower()
+                continue
+            match = re.match(r"^-\s*\[([^\]]+)\]\(/docs/([^/]+)/\)", line)
+            if not match:
+                continue
+            slug = match.group(2).strip()
+            if slug in {"latest", "head"}:
+                continue
+            if section == "legacy":
+                legacy_slugs.append(slug)
+            else:
+                stable_slugs.append(slug)
+
+    if not stable_slugs:
+        stable_slugs = [latest_ver, "0.7"]
+    if not legacy_slugs:
+        legacy_slugs = ["0.6.7"]
+
+    entries: list[dict[str, object]] = [
+        {
+            "slug": "latest",
+            "label": f"v{latest_ver} (latest)",
+            "group": "channel",
+            "same_layout": True,
+        },
+        {
+            "slug": "head",
+            "label": "dev (head)",
+            "group": "channel",
+            "same_layout": True,
+        },
+    ]
+    for slug in stable_slugs:
+        entries.append(
+            {
+                "slug": slug,
+                "label": f"v{slug}",
+                "group": "release",
+                "same_layout": not slug.startswith("0.6"),
+            }
+        )
+    if legacy_slugs:
+        latest_legacy = legacy_slugs[0]
+        entries.append(
+            {
+                "slug": latest_legacy,
+                "label": f"v{latest_legacy} (legacy)",
+                "group": "legacy",
+                "same_layout": False,
+            }
+        )
+    return latest_ver, entries
+
+
+_psd_latest_version, _psd_doc_versions = _load_doc_versions()
 
 # -- Project information -----------------------------------------------------
 
@@ -55,6 +134,10 @@ toc_object_entries_show_parents = "hide"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+# Treat bare single-backtick text (`scenedetect`, `ffmpeg`, parameter names in docstrings)
+# as inline code literals instead of docutils' default italic <cite> title-reference role.
+default_role = "literal"
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -156,17 +239,22 @@ texinfo_documents = [
 
 # -- Theme -------------------------------------------------
 
-# TODO: Consider switching to sphinx_material.
-
 html_theme = "alabaster"
 html_theme_options = {
-    "sidebar_width": "235px",
+    "page_width": "1080px",
+    "sidebar_width": "255px",
     "description": f"Version: [{release}]",
     "show_relbar_bottom": True,
     "show_relbar_top": False,
+    "github_button": False,
     "github_user": "Breakthrough",
     "github_repo": "PySceneDetect",
     "github_type": "star",
+    "font_family": '"Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif',
+    "head_font_family": '"Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif',
+    "code_font_family": (
+        '"JetBrains Mono", "Cascadia Code", "Cascadia Mono", "Consolas", ui-monospace, monospace'
+    ),
     "tip_bg": "#f0f6fa",
     "tip_border": "#c2dcf2",
     "hint_bg": "#f0faf0",
@@ -177,6 +265,11 @@ html_theme_options = {
     "attention_border": "#ffaaaa",
     "logo": "pyscenedetect_logo.png",
     "logo_name": False,
+}
+
+html_context = {
+    "psd_latest_version": _psd_latest_version,
+    "psd_doc_versions": _psd_doc_versions,
 }
 
 
